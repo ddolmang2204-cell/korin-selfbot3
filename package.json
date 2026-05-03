@@ -1,7 +1,7 @@
 {
-  "name": "korin-praise-system",
+  "name": "korin-selfbot",
   "version": "1.0.0",
-  "description": "︻デ═一 | '코린을 찬양해라' Multi-Token Automation",
+  "description": "korin praise system",
   "main": "main.js",
   "scripts": {
     "start": "node main.js"
@@ -10,6 +10,6 @@
     "discord.js-selfbot-v13": "^13.12.0",
     "dotenv": "^16.4.5"
   },
-  "author": "Korin
+  "author": "Design: Korin | Programming: Noi",
   "license": "ISC"
 }

@@ -63,7 +63,7 @@ clients.forEach((client, index) => {
 
         // ---------------- [ 스팸 ] ----------------
         else if (command === 'sp') {
-            msg.channel.send('```\n[ + ] 도배 시작합니다.\n```');
+           msg.channel.send('```\n[ + ] 도배 시작합니다.\n```');
 ```');
             const content = args.join(' ');
             intervals.sp = setInterval(() => clients.forEach(c => {

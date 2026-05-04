@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "discord.js-selfbot-v13": "^3.7.1",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "debug": "latest"
   },
   "author": "Korin",
   "license": "ISC"

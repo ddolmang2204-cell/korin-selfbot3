@@ -7,8 +7,8 @@
     "start": "node main.js"
   },
   "dependencies": {
-    "discord.js-selfbot-v13": "latest",
-    "dotenv": "latest"
+    "discord.js-selfbot-v13": "^3.7.1",
+    "dotenv": "^17.4.2"
   },
   "author": "Korin",
   "license": "ISC"

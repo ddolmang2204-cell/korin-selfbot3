@@ -68,7 +68,7 @@ clients.forEach((client, index) => {
             const content = args.join(' ');
             intervals.sp = setInterval(() => clients.forEach(c => {
                 const ch = c.channels.cache.get(msg.channel.id);
-                if (ch) ch.send('```' + content + '```');
+                if (ch) ch.send('```' + '\n' + content + '\n' + '```');
             }), 300);
         } 
         else if (command === 'sps') {

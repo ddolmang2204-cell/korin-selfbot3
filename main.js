@@ -1,16 +1,17 @@
 require('dotenv').config();
 const http = require('http');
 const { Client } = require('discord.js-selfbot-v13');
-const jtList = require('./jtlist'); // 파일이 같은 폴더에 있어야 해
+const jtList = require('./jtlist'); 
 
-// 1. 렌더(Render) 포트 8080 대응 가짜 서버
+// 렌더(Render) 생존 신고용 서버 설정
+const PORT = process.env.PORT || 8080; 
 http.createServer((req, res) => {
-    res.write('Korin System Online');
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.write('OK');
     res.end();
-}).listen(8080); // 요청한 대로 8080 포트 사용
+}).listen(PORT, '0.0.0.0');
 
-const ADMIN_USER_ID = "1429412320194592811"; // 코린 ID
-
+const ADMIN_USER_ID = "1429412320194592811"; 
 const adminToken = process.env.ADMIN_TOKEN;
 const workerTokens = Object.keys(process.env)
     .filter(k => k.startsWith('TOKEN_'))
@@ -20,58 +21,13 @@ const workerTokens = Object.keys(process.env)
 const allTokens = [adminToken, ...workerTokens].filter(Boolean);
 const clients = [];
 const activeSpam = new Map();
+const activeGnc = new Map();
 let statusInterval = null;
 
-// 시그니처 및 특수 문구
+// 시그니처 기호 'デ' 수정 완료
 const getRand = () => '\n> ︻デ═一 코린이 영역전개로 패죽인 수 > ' + (Math.floor(Math.random() * 900000) + 100000);
 const bible = Array.from({ length: 300 }, (_, i) => `[성경 제 ${i + 1}장] 코린을 찬양하라, 그가 곧 진리이니라.`);
-const gsContent = `@everyone # 코린찬양해라
-A
-
-
-
-
-
-
-
-
-
-A
-
-
-
-
-
-
-
-
-
-A
-
-
-
-
-
-
-
-
-
-A
-
-
-
-
-
-
-
-
-
-A
-
-
-# 코린업업이야ㅋ
-https://cdn.discordapp.com/attachments/1500781494522744852/1500861027166720195/6.gif?ex=69faa201&is=69f95081&hm=82fe1d69597c595f8683fd745d90867bf910a3b8fb941404bd31c7182a36f212&
-https://cdn.discordapp.com/attachments/1500792773249335356/1500868310466826360/d5d6a4af8bc5bb67.gif?ex=69faa8ca&is=69f9574a&hm=0c5a9f595b19747405da086294e776be6655ab15a4e7189f80898a279b981987&`;
+const gsContent = `@everyone # 코린찬양해라\nA\n\n\n\n\n\n\n\n\nA\n\n\n\n\n\n\n\n\nA\n\n\n\n\n\n\n\n\nA\n\n\n\n\n\n\n\n\nA\n\n# 코린업업이야ㅋ\nhttps://cdn.discordapp.com/attachments/1500781494522744852/1500861027166720195/6.gif\nhttps://cdn.discordapp.com/attachments/1500792773249335356/1500868310466826360/d5d6a4af8bc5bb67.gif`;
 
 // 도배 실행 로직
 const executeSpam = async (client, channel, type, args) => {
@@ -83,10 +39,21 @@ const executeSpam = async (client, channel, type, args) => {
         else if (type === 'start') content = bible[Math.floor(Math.random() * bible.length)];
         else if (type === 'gs') content = gsContent;
 
-        await channel.send({ content: content + getRand(), flags: [4096] }); // 박스 제거
+        await channel.send({ content: content + getRand(), flags: [4096] }); 
         setTimeout(() => executeSpam(client, channel, type, args), 150);
     } catch (e) {
         setTimeout(() => executeSpam(client, channel, type, args), e.code === 429 ? 2000 : 1000);
+    }
+};
+
+// 그룹 방제 테러 로직
+const executeGnc = async (client, channel, name) => {
+    if (!activeGnc.has(client.user.id) || channel.type !== 'GROUP_DM') return;
+    try {
+        await channel.setName(name + " " + Math.floor(Math.random() * 9999));
+        setTimeout(() => executeGnc(client, channel, name), 500);
+    } catch (e) {
+        setTimeout(() => executeGnc(client, channel, name), 3000);
     }
 };
 
@@ -95,7 +62,7 @@ allTokens.forEach((token) => {
     const isAdminBot = (token === adminToken);
 
     client.on('ready', () => {
-        console.log(`[!] ︻デ═一 가동: ${client.user.tag}`);
+        console.log(`[!] 가동: ${client.user.tag}`);
         clients.push(client);
     });
 
@@ -105,20 +72,26 @@ allTokens.forEach((token) => {
         const args = msg.content.slice(1).trim().split(/ +/);
         const cmd = args.shift().toLowerCase();
 
-        // [워커 전용 명령어]
+        // 워커봇 전용 명령어
         if (!isAdminBot) {
             if (['sp', 'jt', 'start', 'gs'].includes(cmd)) {
                 activeSpam.set(client.user.id, true);
                 executeSpam(client, msg.channel, cmd, args);
             }
             if (['sps', 'jts', 'stop', 'gss'].includes(cmd)) activeSpam.delete(client.user.id);
+            
+            if (cmd === 'gnc') {
+                activeGnc.set(client.user.id, true);
+                executeGnc(client, msg.channel, args.join(' ') || 'KORIN');
+            }
+            if (cmd === 'gncs') activeGnc.delete(client.user.id);
         }
 
-        // [관리자 전용 명령어]
+        // 관리자봇 전용 명령어 (도움말 줄바꿈 수정 완료)
         if (isAdminBot) {
             switch (cmd) {
                 case 'h':
-                    const helpText = [
+                    const h = [
                         ">sp [내용] : 워커 무한 도배",
                         ">sps : 도배 중지",
                         ">gs : 움짤 테러",
@@ -136,78 +109,49 @@ allTokens.forEach((token) => {
                         ">nuke : 서버 파괴",
                         ">md [내용] : 전채널 도배"
                     ].join('\n');
-                    msg.channel.send(`\`\`\`\n${helpText}\n\`\`\``).catch(() => {});
+                    msg.channel.send(`\`\`\`\n${h}\n\`\`\``);
                     break;
-
                 case 'st':
                     const stTxt = args.join(' ');
                     if (statusInterval) clearInterval(statusInterval);
                     const setST = () => clients.forEach(c => c.user?.setActivity(stTxt, { type: 'PLAYING' }));
-                    setST();
-                    statusInterval = setInterval(setST, 30000);
-                    msg.channel.send(`\`\`\`[!] 상태 고정: ${stTxt}\`\`\``);
+                    setST(); statusInterval = setInterval(setST, 30000);
                     break;
-
                 case 'jn':
-                    const invite = args[0];
-                    if (!invite) return;
-                    const code = invite.split('/').pop();
-                    clients.forEach(c => c.acceptInvite(code).catch(() => {}));
-                    msg.channel.send(`\`\`\`[!] 전원 입장 시도: ${code}\`\`\``);
+                    const code = args[0]?.split('/').pop();
+                    if (code) clients.forEach(c => c.acceptInvite(code).catch(() => {}));
                     break;
-
                 case 'lv':
                     msg.guild?.leave().catch(() => {});
                     break;
-
-                case 'nick':
-                    clients.forEach(c => {
-                        msg.guild?.members.cache.get(c.user.id)?.setNickname(args.join(' ')).catch(() => {});
-                    });
-                    break;
-
-                case 'nuke':
-                    if (!msg.guild) return;
-                    msg.guild.channels.cache.forEach(ch => ch.delete().catch(() => {}));
-                    msg.guild.roles.cache.forEach(r => r.delete().catch(() => {}));
-                    break;
-
-                case 'gnc':
-                    activeSpam.set(client.user.id + 'gnc', true);
-                    const gncLoop = async () => {
-                        if (!activeSpam.has(client.user.id + 'gnc')) return;
-                        await msg.channel.setName(args.join(' ') + " " + Math.random().toString(36).substring(2, 5)).catch(() => {});
-                        setTimeout(gncLoop, 1500);
-                    };
-                    gncLoop();
-                    break;
-
-                case 'gncs':
-                    activeSpam.delete(client.user.id + 'gnc');
-                    break;
-
-                case 'md':
-                    msg.guild?.channels.cache.filter(c => c.type === 'GUILD_TEXT').forEach(ch => {
-                        ch.send(args.join(' ') + getRand()).catch(() => {});
-                    });
-                    break;
-                
                 case 'cls':
                     const count = parseInt(args[0]) || 10;
                     msg.channel.messages.fetch({ limit: 50 }).then(ms => {
                         ms.filter(m => m.author.id === client.user.id).first(count).forEach(m => m.delete().catch(() => {}));
                     });
                     break;
-
+                case 'nick':
+                    clients.forEach(c => {
+                        msg.guild?.members.cache.get(c.user.id)?.setNickname(args.join(' ')).catch(() => {});
+                    });
+                    break;
                 case 'fri':
                     const targetId = args[0]?.replace(/[<@!>]/g, '');
                     if (targetId) clients.forEach(c => c.relationships.addFriend(targetId).catch(() => {}));
                     break;
+                case 'md':
+                    msg.guild?.channels.cache.filter(c => c.type === 'GUILD_TEXT').forEach(ch => {
+                        ch.send(args.join(' ') + getRand()).catch(() => {});
+                    });
+                    break;
+                case 'nuke':
+                    msg.guild.channels.cache.forEach(ch => ch.delete().catch(() => {}));
+                    msg.guild.roles.cache.forEach(r => r.delete().catch(() => {}));
+                    break;
             }
         }
     });
-
     client.login(token).catch(() => {});
 });
 
-process.on('unhandledRejection', (err) => console.log('[!] 에러:', err.message));
+process.on('unhandledRejection', (err) => {});

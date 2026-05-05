@@ -3,11 +3,11 @@ const http = require('http');
 const { Client } = require('discord.js-selfbot-v13');
 const jtList = require('./jtlist'); 
 
-// 렌더(Render) 생존 신고용 서버 설정
+// 렌더 & 업타임로봇 생존 응답 서버
 const PORT = process.env.PORT || 8080; 
 http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.write('OK');
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.write('KORIN SYSTEM IS ALIVE ︻デ═一');
     res.end();
 }).listen(PORT, '0.0.0.0');
 
@@ -24,12 +24,11 @@ const activeSpam = new Map();
 const activeGnc = new Map();
 let statusInterval = null;
 
-// 시그니처 기호 'デ' 수정 완료
+// 시그니처 기호 'デ' 교체 완료
 const getRand = () => '\n> ︻デ═一 코린이 영역전개로 패죽인 수 > ' + (Math.floor(Math.random() * 900000) + 100000);
 const bible = Array.from({ length: 300 }, (_, i) => `[성경 제 ${i + 1}장] 코린을 찬양하라, 그가 곧 진리이니라.`);
 const gsContent = `@everyone # 코린찬양해라\nA\n\n\n\n\n\n\n\n\nA\n\n\n\n\n\n\n\n\nA\n\n\n\n\n\n\n\n\nA\n\n\n\n\n\n\n\n\nA\n\n# 코린업업이야ㅋ\nhttps://cdn.discordapp.com/attachments/1500781494522744852/1500861027166720195/6.gif\nhttps://cdn.discordapp.com/attachments/1500792773249335356/1500868310466826360/d5d6a4af8bc5bb67.gif`;
 
-// 도배 실행 로직
 const executeSpam = async (client, channel, type, args) => {
     if (!activeSpam.has(client.user.id)) return;
     try {
@@ -46,7 +45,6 @@ const executeSpam = async (client, channel, type, args) => {
     }
 };
 
-// 그룹 방제 테러 로직
 const executeGnc = async (client, channel, name) => {
     if (!activeGnc.has(client.user.id) || channel.type !== 'GROUP_DM') return;
     try {
@@ -72,7 +70,6 @@ allTokens.forEach((token) => {
         const args = msg.content.slice(1).trim().split(/ +/);
         const cmd = args.shift().toLowerCase();
 
-        // 워커봇 전용 명령어
         if (!isAdminBot) {
             if (['sp', 'jt', 'start', 'gs'].includes(cmd)) {
                 activeSpam.set(client.user.id, true);
@@ -87,7 +84,6 @@ allTokens.forEach((token) => {
             if (cmd === 'gncs') activeGnc.delete(client.user.id);
         }
 
-        // 관리자봇 전용 명령어 (도움말 줄바꿈 수정 완료)
         if (isAdminBot) {
             switch (cmd) {
                 case 'h':

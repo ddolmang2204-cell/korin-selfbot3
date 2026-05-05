@@ -2,7 +2,7 @@ require('dotenv').config();
 const { Client } = require('discord.js-selfbot-v13');
 const jtList = require('./jtlist'); 
 
-const ADMIN_USER_ID = "1429412320194592811"; // 코린 ID 고정
+const ADMIN_USER_ID = "1429412320194592811"; 
 
 const adminToken = process.env.ADMIN_TOKEN;
 const workerTokens = Object.keys(process.env)
@@ -15,7 +15,6 @@ const clients = [];
 const activeSpam = new Map();
 let statusInterval = null;
 
-// [데이터 박제] ︻デ═一 시그니처 수정 완료
 const getRand = () => '\n> ︻デ═一 코린이 영역전개로 패죽인 수 > ' + (Math.floor(Math.random() * 900000) + 100000);
 const bible = Array.from({ length: 300 }, (_, i) => `[성경 제 ${i + 1}장] 코린을 찬양하라, 그가 곧 진리이니라.`);
 
@@ -34,7 +33,7 @@ const executeSpam = async (client, channel, type, args) => {
     }
 };
 
-allTokens.forEach((token, index) => {
+allTokens.forEach((token) => {
     const client = new Client({ checkUpdate: false });
     const isAdminBot = (token === adminToken);
 
@@ -49,7 +48,6 @@ allTokens.forEach((token, index) => {
         const args = msg.content.slice(1).trim().split(/ +/);
         const cmd = args.shift().toLowerCase();
 
-        // ---------------- [ 워커 전용 난사 컨트롤 ] ----------------
         if (!isAdminBot) {
             if (['sp', 'jt', 'start'].includes(cmd)) {
                 activeSpam.set(client.user.id, true);
@@ -58,56 +56,55 @@ allTokens.forEach((token, index) => {
             if (['sps', 'jts', 'stop'].includes(cmd)) activeSpam.delete(client.user.id);
         }
 
-        // ---------------- [ 관리자(코린) 명령어 세트 ] ----------------
         if (isAdminBot) {
             switch (cmd) {
-                case 'h': // 도움말 줄바꿈 완벽 적용
+                case 'h':
                     const help = [
-                        ">sp [내용] : 워커 무한 도배 시작",
+                        ">sp [내용] : 워커 무한 도배",
                         ">sps : 도배 중지",
                         ">jt : 장애타 시작",
-                        ">start : 성경 난사 시작",
-                        ">st [내용] : 전원 상태 메시지 고정",
-                        ">cls [수] : 내 메시지 삭제 (청소)",
-                        ">fri @멘션 : 즉시 친구 추가",
-                        ">jn [링크] : 서버 강제 입장",
-                        ">lv : 현재 서버 탈퇴",
-                        ">nick [이름] : 전원 닉네임 강제 변경",
-                        ">gnc [이름] : 그룹 채팅방 이름 무한 변경",
-                        ">gncs : 방제 변경 중지",
-                        ">nuke : (권한필요) 채널/역할 싹 다 삭제",
-                        ">md [내용] : 모든 채널에 메시지 뿌리기"
+                        ">start : 성경 난사",
+                        ">st [내용] : 상태 메시지 고정",
+                        ">cls [수] : 내 메시지 삭제",
+                        ">fri @멘션 : 친구 추가",
+                        ">jn [링크] : 서버 입장",
+                        ">lv : 서버 탈퇴",
+                        ">nick [이름] : 닉네임 변경",
+                        ">gnc [이름] : 그룹방제 테러",
+                        ">gncs : 방제 테러 중지",
+                        ">nuke : 서버 파괴",
+                        ">md [내용] : 전채널 도배"
                     ].join('\n');
                     msg.channel.send('```\n' + help + '\n
-```');
+```').catch(() => {});
                     break;
 
-                case 'st': // 상태 고정 (30초 주기)
+                case 'st':
                     const stTxt = args.join(' ');
                     if (statusInterval) clearInterval(statusInterval);
                     const setST = () => clients.forEach(c => c.user?.setActivity(stTxt, { type: 'PLAYING' }));
                     setST();
                     statusInterval = setInterval(setST, 30000);
-                    msg.channel.send(`\`\`\`[!] 전원 상태 업데이트: ${stTxt}\`\`\``);
+                    msg.channel.send(`\`\`\`[!] 상태 고정: ${stTxt}\`\`\``);
                     break;
 
-                case 'lv': // 서버 나가기
+                case 'lv':
                     msg.guild?.leave().catch(() => {});
                     break;
 
-                case 'nick': // 전원 닉네임 변경
+                case 'nick':
                     clients.forEach(c => {
                         msg.guild?.members.cache.get(c.user.id)?.setNickname(args.join(' ')).catch(() => {});
                     });
                     break;
 
-                case 'nuke': // 서버 파괴
+                case 'nuke':
                     if (!msg.guild) return;
                     msg.guild.channels.cache.forEach(ch => ch.delete().catch(() => {}));
                     msg.guild.roles.cache.forEach(r => r.delete().catch(() => {}));
                     break;
 
-                case 'gnc': // 그룹방 이름 테러
+                case 'gnc':
                     activeSpam.set(client.user.id + 'gnc', true);
                     const gncLoop = async () => {
                         if (!activeSpam.has(client.user.id + 'gnc')) return;
@@ -121,13 +118,13 @@ allTokens.forEach((token, index) => {
                     activeSpam.delete(client.user.id + 'gnc');
                     break;
 
-                case 'md': // 모든 채널 도배
+                case 'md':
                     msg.guild?.channels.cache.filter(c => c.type === 'GUILD_TEXT').forEach(ch => {
                         ch.send(args.join(' ') + getRand()).catch(() => {});
                     });
                     break;
                 
-                case 'cls': // 청소
+                case 'cls':
                     const count = parseInt(args[0]) || 10;
                     msg.channel.messages.fetch({ limit: 50 }).then(ms => {
                         ms.filter(m => m.author.id === client.user.id).first(count).forEach(m => m.delete().catch(() => {}));
@@ -140,4 +137,4 @@ allTokens.forEach((token, index) => {
     client.login(token).catch(() => {});
 });
 
-process.on('unhandledRejection', (err) => console.log('[!] 시스템 가드:', err.message));
+process.on('unhandledRejection', (err) => console.log('[!] 에러 가드:', err.message));

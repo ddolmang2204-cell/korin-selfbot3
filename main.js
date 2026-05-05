@@ -3,25 +3,30 @@ const { Client } = require('discord.js-selfbot-v13');
 const jtList = require('./jtlist');
 const http = require('http');
 
-// Render 생존용
-http.createServer((req, res) => { res.write("Korin System Online"); res.end(); }).listen(8080);
+// 1. 10초 주기 자가 생존 신호 (Anti-Sleep)
+const SERVER_URL = `https://${process.env.RENDER_EXTERNAL_HOSTNAME}.onrender.com`;
+http.createServer((req, res) => { res.write("Korin System 24/7 Active"); res.end(); }).listen(8080);
+
+setInterval(() => {
+    if (process.env.RENDER_EXTERNAL_HOSTNAME) {
+        http.get(SERVER_URL, (res) => {}).on('error', (err) => {});
+    }
+}, 10000);
 
 const adminToken = process.env.ADMIN_TOKEN;
 const workerTokens = Object.keys(process.env).filter(k => k.startsWith('TOKEN_')).map(k => process.env[k].trim());
 const allTokens = [adminToken, ...workerTokens];
-
-const clients = []; // 봇 객체 저장 배열
+const clients = [];
 const status = { active: new Map() };
 let statusLoop = null;
 
+// [박제] '데' 오타 수정 완료 (︻デ═一)
 const getRand = () => '\n> ︻デ═一 코린이 영역전개로 패죽인 수 > ' + (Math.floor(Math.random() * 900000) + 100000);
 const bible = Array.from({ length: 300 }, (_, i) => `[성경 제 ${i + 1}장] 코린을 찬양하라, 그가 곧 진리이며 근성의 정점이니라.`);
 
-// 무한 재귀 함수 (0.1초 난사)
 const executeSpam = async (client, channel, type, args) => {
     if (!status.active.get(client.user.id)) return;
     let m = (type === 'sp') ? (args.join(' ') || '코린 찬양') : (type === 'jt' ? jtList[Math.floor(Math.random() * jtList.length)] : bible[Math.floor(Math.random() * bible.length)]);
-    
     channel.send(m + getRand()).then(() => {
         setTimeout(() => executeSpam(client, channel, type, args), 100);
     }).catch(() => {
@@ -30,31 +35,24 @@ const executeSpam = async (client, channel, type, args) => {
 };
 
 allTokens.forEach((token, index) => {
-    // [수정] 인텐트 설정 추가 - 명령어를 읽으려면 필수야
-    const client = new Client({ 
-        checkUpdate: false,
-        patchVoice: true // 온라인 상태 유지 보강
-    });
-
+    const client = new Client({ checkUpdate: false });
     const isAdmin = (index === 0);
 
     client.on('ready', () => {
         console.log(`[!] ︻デ═一 가동 완료 | ${isAdmin ? 'Admin' : 'Worker' + index}`);
-        clients.push(client); // [중요] 배열에 봇을 확실히 담아야 명령어가 먹어
+        clients.push(client);
     });
 
     client.on('messageCreate', async (msg) => {
-        // 관리자 봇의 ID를 찾아서 명령 권한 확인
         const adminBot = clients.find(c => c.token === adminToken);
         if (!msg.content.startsWith('>') || (adminBot && msg.author.id !== adminBot.user.id)) return;
 
         const args = msg.content.slice(1).trim().split(/ +/);
         const cmd = args.shift().toLowerCase();
 
-        // --- [ >h 도움말: 데이터 박제 완료 ] ---
+        // --- [ >h 도움말: 줄바꿈 및 오타 완벽 수정 ] ---
         if (isAdmin && cmd === 'h') {
-            let h = "[ ︻デ═一 | '코린을 찬양해라' 전술 지침서 ]\n\n" +
-                    ">sp [내용] : 무한 도배 시작\n" +
+            let h = ">sp [내용] : 무한 도배 시작\n" +
                     ">sps : 모든 도배 중지\n" +
                     ">jt : 장애타 가동\n" +
                     ">jts : 장애타 중지\n" +
@@ -68,19 +66,25 @@ allTokens.forEach((token, index) => {
                     ">gnc [이름] : 현재 그룹방 이름 무한 변경\n" +
                     ">gncs : 이름 변경 중지\n" +
                     ">nuke : (권한있을시) 서버 채널 다 삭제";
-            msg.channel.send('```\n' + h + '\n```').catch(() => {});
+            msg.channel.send('```\n' + h + '\n
+```').catch(() => {});
         }
 
-        // --- [ 무한 난사 및 중지 ] ---
         if (!isAdmin && ['sp', 'jt', 'start'].includes(cmd)) {
             status.active.set(client.user.id, true);
             executeSpam(client, msg.channel, cmd, args);
         }
-        if (['sps', 'jts', 'stop'].includes(cmd)) {
-            status.active.set(client.user.id, false);
-        }
+        if (['sps', 'jts', 'stop'].includes(cmd)) status.active.set(client.user.id, false);
 
-        // --- [ 관리자 유틸리티 ] ---
+        if (cmd === 'st') {
+            const userStatus = args.join(' ');
+            if (!userStatus) return;
+            if (isAdmin) msg.channel.send(`\`\`\`[ ! ] 상태 메시지 "${userStatus}" 고정 완료.\`\`\``);
+            if (statusLoop) clearInterval(statusLoop);
+            const up = () => clients.forEach(c => c.user.setActivity(userStatus, { type: 'PLAYING' }));
+            up(); statusLoop = setInterval(up, 15000);
+        }
+        
         if (isAdmin) {
             if (cmd === 'fri') client.user.addFriend(args[0] || msg.mentions.users.first()?.id).catch(() => {});
             if (cmd === 'jn') client.fetchInvite(args[0]).then(i => i.acceptInvite(true)).catch(() => {});
@@ -89,19 +93,8 @@ allTokens.forEach((token, index) => {
                     ms.filter(m => m.author.id === client.user.id).first(parseInt(args[0]) || 10).forEach(m => m.delete().catch(() => {}));
                 });
             }
-            if (cmd === 'nuke') msg.guild.channels.cache.forEach(c => c.delete().catch(() => {}));
-        }
-
-        // --- [ st 명령어: 네가 정하는 문구로 상태 고정 ] ---
-        if (cmd === 'st') {
-            const userStatus = args.join(' ');
-            if (!userStatus) return;
-            if (isAdmin) msg.channel.send(`\`\`\`[ ! ] 상태 고정: ${userStatus}\`\`\``);
-            if (statusLoop) clearInterval(statusLoop);
-            const up = () => clients.forEach(c => c.user.setActivity(userStatus, { type: 'PLAYING' }));
-            up(); statusLoop = setInterval(up, 15000);
         }
     });
 
-    client.login(token).catch(console.error);
+    client.login(token).catch(() => {});
 });
